@@ -1,0 +1,99 @@
+name: CI/CD Pipeline
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Format check with black
+        run: black --check src tests
+      
+      - name: Import sort check with isort
+        run: isort --check-only src tests
+      
+      - name: Lint with flake8
+        run: flake8 src tests
+      
+      - name: Type check with mypy
+        run: mypy src
+      
+      - name: Run tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/test_db
+        run: |
+          pytest --cov=src --cov-report=xml --cov-report=html
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+      
+      - name: Update blog
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        run: |
+          echo "## Build $(date)" >> blog/README.md
+          echo "- Branch: ${{ github.ref_name }}" >> blog/README.md
+          echo "- Commit: ${{ github.sha }}" >> blog/README.md
+          echo "- Tests: Passed ✅" >> blog/README.md
+          echo "- Code Coverage: $(pytest --cov=src --cov-report=term | grep TOTAL | awk '{print $4}')" >> blog/README.md
+          echo "" >> blog/README.md
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add blog/README.md
+          git commit -m "Update development blog [skip ci]" || true
+      
+      - name: Push blog updates
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Build Docker image
+        run: docker build -t reasoning-ml-pipeline .
+      
+      - name: Deploy to production
+        run: |
+          echo "Deploy to production server"
+          # Add deployment steps here
