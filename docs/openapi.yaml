@@ -1,0 +1,309 @@
+openapi: 3.0.0
+info:
+  title: Binary Reasoning ML Pipeline API
+  description: API for binary reasoning predictions with uncertainty quantification
+  version: 1.0.0
+  contact:
+    email: support@example.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+  - url: https://api.reasoning.example.com
+    description: Production server
+
+paths:
+  /health:
+    get:
+      summary: Health check endpoint
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+
+  /models:
+    get:
+      summary: List available models
+      operationId: listModels
+      responses:
+        '200':
+          description: List of available models
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ModelsResponse'
+
+  /predict:
+    post:
+      summary: Make a single prediction
+      operationId: predict
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictionRequest'
+      responses:
+        '200':
+          description: Prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PredictionResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /predict/batch:
+    post:
+      summary: Make batch predictions
+      operationId: predictBatch
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchPredictionRequest'
+      responses:
+        '200':
+          description: Batch prediction results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchPredictionResponse'
+
+  /predict/category:
+    post:
+      summary: Make prediction with category context
+      operationId: predictWithCategory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CategoryPredictionRequest'
+      responses:
+        '200':
+          description: Category-aware prediction result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CategoryPredictionResponse'
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: healthy
+        timestamp:
+          type: string
+          format: date-time
+        version:
+          type: string
+          example: 1.0.0
+
+    ModelsResponse:
+      type: object
+      properties:
+        models:
+          type: array
+          items:
+            $ref: '#/components/schemas/ModelInfo'
+
+    ModelInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: logistic_regression
+        name:
+          type: string
+          example: Logistic Regression
+        accuracy:
+          type: number
+          example: 0.98
+        supports_uncertainty:
+          type: boolean
+          example: false
+        inference_time_ms:
+          type: integer
+          example: 5
+
+    PredictionRequest:
+      type: object
+      required:
+        - prompt
+      properties:
+        prompt:
+          type: string
+          example: Is a hot dog a sandwich?
+        model_id:
+          type: string
+          default: logistic_regression
+          example: mc_dropout
+        include_reasoning:
+          type: boolean
+          default: false
+        include_uncertainty:
+          type: boolean
+          default: false
+
+    PredictionResponse:
+      type: object
+      properties:
+        prediction:
+          type: string
+          enum: [yes, no]
+          example: no
+        confidence:
+          type: number
+          minimum: 0
+          maximum: 1
+          example: 0.85
+        reasoning_trace:
+          type: array
+          items:
+            type: string
+        uncertainty:
+          $ref: '#/components/schemas/UncertaintyInfo'
+        model_used:
+          type: string
+          example: mc_dropout
+        inference_time_ms:
+          type: integer
+          example: 100
+
+    UncertaintyInfo:
+      type: object
+      properties:
+        total:
+          type: number
+          example: 0.015
+        epistemic:
+          type: number
+          example: 0.003
+        aleatoric:
+          type: number
+          example: 0.012
+        confidence_interval:
+          type: array
+          items:
+            type: number
+          example: [0.82, 0.88]
+
+    BatchPredictionRequest:
+      type: object
+      required:
+        - prompts
+      properties:
+        prompts:
+          type: array
+          items:
+            type: string
+          example: ["Is a hot dog a sandwich?", "Is water wet?"]
+        model_id:
+          type: string
+          default: logistic_regression
+        include_uncertainty:
+          type: boolean
+          default: false
+
+    BatchPredictionResponse:
+      type: object
+      properties:
+        predictions:
+          type: array
+          items:
+            type: object
+            properties:
+              prompt:
+                type: string
+              prediction:
+                type: string
+                enum: [yes, no]
+              confidence:
+                type: number
+        model_used:
+          type: string
+        total_inference_time_ms:
+          type: integer
+
+    CategoryPredictionRequest:
+      type: object
+      required:
+        - prompt
+        - category
+      properties:
+        prompt:
+          type: string
+        category:
+          type: string
+          enum: [food_classification, edge_classifications, social_cultural, threshold_questions]
+        model_id:
+          type: string
+          default: hierarchical_bayesian
+
+    CategoryPredictionResponse:
+      type: object
+      properties:
+        prediction:
+          type: string
+          enum: [yes, no]
+        confidence:
+          type: number
+        category_performance:
+          type: object
+          properties:
+            category:
+              type: string
+            category_accuracy:
+              type: number
+            category_uncertainty:
+              type: number
+        uncertainty:
+          $ref: '#/components/schemas/UncertaintyInfo'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        code:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+
+security:
+  - ApiKeyAuth: []

@@ -1,0 +1,62 @@
+# Bayesian Binary Reasoning Model Configuration
+
+# Model architecture settings
+model:
+  # Neural network settings (BNN and MC Dropout)
+  embedding_dim: 128          # Dimension of token embeddings
+  hidden_dim: 256            # LSTM hidden dimension
+  num_layers: 2              # Number of LSTM layers
+  dropout: 0.5               # Dropout rate (higher for MC Dropout)
+  
+  # Bayesian Neural Network specific
+  prior_scale: 1.0           # Scale for weight priors
+  
+  # Gaussian Process specific
+  kernel: 'rbf'              # Kernel type: 'rbf', 'matern', 'dot_product'
+  n_restarts: 10             # Number of optimizer restarts for GP
+
+# Training settings
+training:
+  batch_size: 32             # Batch size for neural networks
+  epochs: 30                 # Maximum number of epochs (fewer for Bayesian)
+  learning_rate: 0.001       # Initial learning rate
+  early_stopping_patience: 10 # Epochs to wait before early stopping
+  
+  # Bayesian specific
+  num_samples: 100           # Number of samples for prediction
+  warmup_epochs: 5           # Warmup epochs for SVI
+
+# Data settings
+data:
+  train_split: 0.7           # Training set proportion
+  val_split: 0.15            # Validation set proportion
+  test_split: 0.15           # Test set proportion
+  max_sequence_length: 50    # Maximum reasoning trace length
+
+# Uncertainty settings
+uncertainty:
+  mc_samples: 50             # Monte Carlo samples for uncertainty
+  calibration_bins: 10       # Number of bins for ECE calculation
+  confidence_threshold: 0.8   # Threshold for high confidence predictions
+
+# Experiment settings
+experiment:
+  seed: 42                   # Random seed for reproducibility
+  save_best_only: true       # Save only best model based on validation
+  plot_uncertainty: true     # Generate uncertainty plots
+  
+# Hardware settings
+hardware:
+  num_workers: 2             # Number of data loading workers
+  pin_memory: true           # Pin memory for faster GPU transfer
+
+# Evaluation settings
+evaluation:
+  metrics:
+    - accuracy
+    - f1_score
+    - expected_calibration_error
+    - brier_score
+    - negative_log_likelihood
+  uncertainty_analysis: true  # Perform detailed uncertainty analysis
+  save_predictions: true      # Save test predictions with uncertainties

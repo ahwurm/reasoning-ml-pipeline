@@ -1,0 +1,54 @@
+# Binary Reasoning Math Model Configuration
+
+# Model architecture settings
+model:
+  # Neural network settings
+  embedding_dim: 128          # Dimension of token embeddings
+  hidden_dim: 256            # LSTM hidden dimension
+  num_layers: 2              # Number of LSTM layers
+  dropout: 0.3               # Dropout rate
+  
+  # Random Forest settings (if using random_forest model type)
+  n_estimators: 100          # Number of trees
+  max_depth: 10              # Maximum tree depth
+  
+  # Logistic Regression settings (if using logistic model type)
+  max_iter: 1000             # Maximum iterations for convergence
+
+# Training settings
+training:
+  batch_size: 32             # Batch size for neural network
+  epochs: 50                 # Maximum number of epochs
+  learning_rate: 0.001       # Initial learning rate
+  early_stopping_patience: 10 # Epochs to wait before early stopping
+  weight_decay: 0.0001       # L2 regularization
+
+# Data settings
+data:
+  train_split: 0.7           # Training set proportion
+  val_split: 0.15            # Validation set proportion
+  test_split: 0.15           # Test set proportion
+  max_sequence_length: 50    # Maximum reasoning trace length
+  vocab_min_freq: 2          # Minimum word frequency for vocabulary
+
+# Experiment settings
+experiment:
+  seed: 42                   # Random seed for reproducibility
+  save_best_only: true       # Save only best model based on validation
+  log_interval: 10           # Log training progress every N batches
+
+# Hardware settings
+hardware:
+  num_workers: 2             # Number of data loading workers
+  pin_memory: true           # Pin memory for faster GPU transfer
+  mixed_precision: false     # Use mixed precision training
+
+# Evaluation settings
+evaluation:
+  metrics:
+    - accuracy
+    - f1_score
+    - precision
+    - recall
+  save_predictions: true     # Save test predictions
+  save_confusion_matrix: true # Save confusion matrix plot
