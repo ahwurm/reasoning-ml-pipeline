@@ -241,8 +241,16 @@ def main():
     args = parser.parse_args()
     
     if not args.api_key:
-        # Use the hardcoded key for convenience
-        args.api_key = "sk-1a7afbc4eb614b56a1dfc74d69a6954c"
+        # Try to get from environment variable
+        args.api_key = os.getenv("DEEPSEEK_API_KEY")
+        
+        if not args.api_key:
+            print("Error: No API key provided.")
+            print("Please provide an API key using one of these methods:")
+            print("1. Command line: --api-key YOUR_API_KEY")
+            print("2. Environment variable: export DEEPSEEK_API_KEY=YOUR_API_KEY")
+            print("3. .env file: DEEPSEEK_API_KEY=YOUR_API_KEY")
+            sys.exit(1)
     
     # Create generator
     generator = IncrementalDatasetGenerator(args.api_key, args.output)
